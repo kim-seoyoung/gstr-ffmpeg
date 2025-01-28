@@ -31,8 +31,9 @@ def receive_rtp_video_with_timestamps():
         while True:
             line = process.stderr.readline().decode('utf-8')
 
-            if 'pts_time' in line:  # PTS(Time) 정보 포함된 줄 필터링
-                print(f"Timestamp Info: {line.strip()}")
+            idx = line.find('pts:')
+            if idx != -1:
+                print(f"Timestamp Info: {line.strip()[idx+4: idx+12]}")
                 break
 
             if not line:
