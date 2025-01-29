@@ -1,6 +1,6 @@
 import socket
 import struct
-import subprocess
+import ffmpeg
 import cv2
 import numpy as np
 
@@ -8,12 +8,19 @@ class RTPStreamDecoder:
     def __init__(self, host, port):
         self.host = host
         self.port = port
-        self.packet_buffer = {}
+        self.packet_buffer = []
 
-        # FFmpeg 프로세스 생성
-        self.ffmpeg_process = subprocess.Popen(
-            ['ffmpeg', '-i', 'pipe:0', '-f', 'rawvideo', '-pix_fmt', 'bgr24', 'pipe:1'],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        self.start_ffmpeg()
+
+    def start_ffmpeg(self):
+        """
+        FFmpeg 파이프라인 생성
+        """
+        self.ffmpeg_process = (
+            ffmpeg
+            .input('pipe:0', format='h264')  # H.264 데이터를 파이프로 입력
+            .output('pipe:', format='rawvideo', pix_fmt='bgr24')  # 디코딩된 프레임 출력
+            .run_async(pipe_stdout=True, pipe_stdin=True, pipe_stderr=True)
         )
 
     def start(self):
@@ -82,8 +89,18 @@ class RTPStreamDecoder:
         frame = np.frombuffer(raw_frame, np.uint8).reshape((height, width, 3))
         cv2.imshow('RTP Stream', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            exit()
+            self.cleanup()
+
+    def cleanup(self):
+        """
+        리소스 정리 및 종료
+        """
+        print("Cleaning up...")
+        self.ffmpeg_process.stdin.close()
+        self.ffmpeg_process.stdout.close()
+        self.ffmpeg_process.wait()
+        cv2.destroyAllWindows()
+        exit()
 
 # 실행
 if __name__ == "__main__":
