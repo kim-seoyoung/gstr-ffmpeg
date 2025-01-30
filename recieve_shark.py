@@ -74,6 +74,13 @@ class RTPStreamDecoder:
         print(f'nal type: {nal_type}')
 
         if nal_type == 9:  # AUD (무시)
+            if not self.has_sps_pps():
+                return
+            if self.packet_buffer:
+                nal_data = b''.join(self.packet_buffer)
+                self.decode_h264(nal_data)
+            self.packet_buffer = []
+            self.ts = rtp_header['timestamp']
             return
 
         if nal_type == 28:  # FU-A (Fragmented Unit)
@@ -91,21 +98,24 @@ class RTPStreamDecoder:
                 self.current_frame = b''
 
         elif nal_type in [7, 8]:  # SPS, PPS
-            self.packet_buffer.append(b'\x00\x00\x00\x01' + payload)
+            # self.packet_buffer.append(b'\x00\x00\x00\x01' + payload)
+            self.decode_h264(payload)
             self.sps_pps.append(payload)
 
-        elif nal_type == 1:  # Non-IDR Frame
+        elif nal_type == 1 or nal_type == 5:  # Non-IDR Frame
             if not self.has_sps_pps():
                 print("Skipping P-Frame: SPS/PPS missing!")
                 return
-            self.packet_buffer.append(b'\x00\x00\x00\x01' + payload)
+            # self.packet_buffer.append(b'\x00\x00\x00\x01' + payload)
+            self.decode_h264(payload)
+            self.sps_pps.append(payload)
 
-        if self.ts != rtp_header['timestamp']:
-            if self.packet_buffer:
-                nal_data = b''.join(self.packet_buffer)
-                # self.decode_h264(nal_data)
-            self.packet_buffer = []
-            self.ts = rtp_header['timestamp']
+        # if self.ts != rtp_header['timestamp']:
+        #     if self.packet_buffer:
+        #         nal_data = b''.join(self.packet_buffer)
+        #         self.decode_h264(nal_data)
+        #     self.packet_buffer = []
+        #     self.ts = rtp_header['timestamp']
 
     def has_sps_pps(self):
         """

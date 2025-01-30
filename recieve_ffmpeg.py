@@ -8,6 +8,7 @@ def receive_rtp_video_with_timestamps():
         ffmpeg
         .input('/home/seoyoung/Downloads/stream.sdp', protocol_whitelist='file,udp,rtp')
         .output('pipe:', format='rawvideo', pix_fmt='rgb24', vf='showinfo')  # 영상 데이터를 파이프로 출력
+        .global_args('-fflags', '+genpts', '-copyts', '-use_wallclock_as_timestamps', '1') 
         .run_async(pipe_stdout=True, pipe_stderr=True, pipe_stdin=True)
     )
 
@@ -33,7 +34,7 @@ def receive_rtp_video_with_timestamps():
 
             idx = line.find('pts:')
             if idx != -1:
-                print(f"Timestamp Info: {line.strip()[idx+4: idx+12]}")
+                print(f"Timestamp Info: {line.strip()[idx+4: idx+30]}")
                 break
 
             if not line:
