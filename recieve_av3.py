@@ -18,8 +18,6 @@ class RTPStreamDecoder:
 
         self.nal_buffer = ''
 
-        a = 1
-
     def start(self):
         # UDP 소켓 생성 및 바인딩
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -36,7 +34,7 @@ class RTPStreamDecoder:
                 rtp_header, payload = self.parse_rtp_packet(data)
                 if rtp_header:
                     frm = self.process_payload(rtp_header, payload)
-                    if frm is not None and len(frm) > 0:
+                    if frm is not None and len(frm) > 0 and self.sps and self.pps:
                         # with open(f'./data/frm_{frm_cnt}_r.txt', 'wb') as f:
                         #     f.write(frm)
                         # frm_cnt += 1
