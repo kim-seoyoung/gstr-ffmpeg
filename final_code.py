@@ -17,7 +17,6 @@ class RTPStreamDecoder:
         self.codec = av.CodecContext.create('h264', 'r')
 
     def start(self):
-        # UDP 소켓 생성 및 바인딩
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((self.host, self.port))
         print(f"Listening for RTP packets on {self.host}:{self.port}")
@@ -36,18 +35,15 @@ class RTPStreamDecoder:
                 self.timestamp = timestamp
 
     def parse_timestamp(self, data):
-        """
-        RTP 헤더를 파싱하고 페이로드를 반환
-        """
-        header = struct.unpack('!BBHII', data[:12])  # RTP 헤더 파싱
-        version = (header[0] >> 6) & 0x03           # 버전
-        if version != 2:  # RTP 버전 확인 (2가 아니면 무시)
+        header = struct.unpack('!BBHII', data[:12]) 
+        version = (header[0] >> 6) & 0x03 
+        if version != 2:  # RTP version
             return None, None
 
-        payload_type = header[1] & 0x7F             # 페이로드 타입
-        sequence_number = header[2]                 # 시퀀스 번호
-        timestamp = header[3]                       # 타임스탬프
-        ssrc = header[4]                            # SSRC 식별자
+        payload_type = header[1] & 0x7F             # payload type
+        sequence_number = header[2]                 # sequence number
+        timestamp = header[3]                       # timestamp
+        ssrc = header[4]                            # SSRC identifier
 
         return timestamp
 
@@ -66,7 +62,6 @@ class RTPStreamDecoder:
             pl_type = fu_header & 0x1F
 
             if start_bit:
-                # 재구성된 NAL 헤더: 원래 FU indicator의 상위 3비트와 FU header의 하위 5비트
                 reconstructed_header = bytes([(nal_header & 0xE0) | pl_type])
                 self.fu_buffer = [reconstructed_header + payload[2:]]
             else:
@@ -79,7 +74,7 @@ class RTPStreamDecoder:
 
             return
 
-        if pl_type == 9:  # AUD (무시)
+        if pl_type == 9:  # AUD
             res = b''.join(self.packet_buffer)
             self.packet_buffer.clear()
             self.packet_buffer.append(b'\x00\x00\x00\x01' + payload)
